@@ -1,9 +1,17 @@
 package main
 
+import (
+	"github.com/eventscompass/service-framework/service"
+)
+
 type Config struct {
 	// BookingsDB encapsulates the configuration of the database
 	// layer used by the service.
 	BookingsDB DBConfig
+
+	// BusConfig encapsulates the configuration for the message
+	// bus used by the service.
+	BookingsMQ service.BusConfig
 }
 
 // DBConfig encapsulates the configuration of the database layer
