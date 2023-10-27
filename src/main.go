@@ -7,8 +7,11 @@ import (
 	"net/http"
 
 	"github.com/caarlos0/env/v6"
+
 	"github.com/eventscompass/booking-service/src/internal"
 	"github.com/eventscompass/booking-service/src/internal/mongodb"
+	"github.com/eventscompass/service-framework/pubsub"
+	"github.com/eventscompass/service-framework/pubsub/rabbitmq"
 	"github.com/eventscompass/service-framework/service"
 )
 
@@ -20,6 +23,11 @@ type BookingService struct {
 	// restHandler is used to start an http server, that serves
 	// http requests to the rest api of the service.
 	restHandler http.Handler
+
+	// bookingsBus is used for publishing and subscribing to messages.
+	bookingsBus service.MessageBus
+
+	events map[string]service.EventHandler
 
 	// bookingsDB is used to read and store bookings in a container database.
 	bookingsDB internal.BookingsContainer
@@ -45,9 +53,21 @@ func (s *BookingService) Init(ctx context.Context) error {
 	}
 	s.bookingsDB = db
 
+	// Init the message bus,
+	bus, err := rabbitmq.NewAMQPBus(&s.cfg.BookingsMQ, pubsub.EventsExchange)
+	if err != nil {
+		return fmt.Errorf("init mq: %w", err)
+	}
+	s.bookingsBus = bus
+
 	// Init the rest API of the service.
 	if err := s.initREST(); err != nil {
 		return fmt.Errorf("init rest: %w", err)
+	}
+
+	// Init the events.
+	if err := s.initEvents(); err != nil {
+		return fmt.Errorf("init events: %w", err)
 	}
 
 	return nil
