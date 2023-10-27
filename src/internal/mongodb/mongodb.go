@@ -1,0 +1,94 @@
+package mongodb
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+
+	. "github.com/eventscompass/booking-service/src/internal"
+	"github.com/eventscompass/service-framework/service"
+)
+
+// Config holds configuration variables for connecting to a Mongo database.
+type Config struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+}
+
+// MongoDBContainer is a container backed by a Mongo database.
+type MongoDBContainer struct {
+	client   *mongo.Client
+	database *mongo.Database
+}
+
+var _ BookingsContainer = (*MongoDBContainer)(nil)
+
+// NewMongoDBContainer creates a new [MongoDBContainer] instance.
+func NewMongoDBContainer(ctx context.Context, cfg *Config) (*MongoDBContainer, error) {
+	connInfo := fmt.Sprintf("mongodb://%s:%d", cfg.Host, cfg.Port)
+	clientOptions := options.Client().ApplyURI(connInfo)
+	clientOptions.SetAuth(options.Credential{
+		Username: cfg.Username,
+		Password: cfg.Password,
+	})
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("mongo connect: %w", err)
+	}
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		return nil, fmt.Errorf("ping mongo: %w", err)
+	}
+
+	database := client.Database(cfg.Database)
+	return &MongoDBContainer{
+		client:   client,
+		database: database,
+	}, nil
+}
+
+// Create implements the [BookingsContainer] interface.
+func (m *MongoDBContainer) Create(ctx context.Context, collection string, data any) error {
+	_, err := m.database.Collection(collection).InsertOne(ctx, data)
+	if err != nil {
+		return service.Unexpected(ctx, err)
+	}
+	return nil
+}
+
+// GetByID implements the [BookingsContainer] interface.
+func (m *MongoDBContainer) GetByID(
+	ctx context.Context,
+	collection string,
+	id string,
+) (any, error) {
+	c := m.database.Collection(collection)
+	one := c.FindOne(ctx, bson.M{"id": id})
+	if err := one.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("%w: %v", service.ErrNotFound, err)
+		}
+		return nil, service.Unexpected(ctx, err)
+	}
+
+	var elem any
+	switch collection {
+	case BookingsCollection:
+		elem = &Booking{}
+	default:
+		return nil, fmt.Errorf(
+			"%w: unknown collection %q", service.ErrUnexpected, collection)
+	}
+
+	if err := one.Decode(elem); err != nil {
+		return nil, service.Unexpected(ctx, err)
+	}
+	return elem, nil
+}
