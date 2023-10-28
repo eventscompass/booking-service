@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/caarlos0/env/v6"
@@ -27,6 +26,9 @@ type BookingService struct {
 	// bookingsBus is used for publishing and subscribing to messages.
 	bookingsBus service.MessageBus
 
+	// events are the messages from the message bus for which the
+	// service is subscribed. With every event is associated an
+	// event handler function,
 	events map[string]service.EventHandler
 
 	// bookingsDB is used to read and store bookings in a container database.
@@ -41,7 +43,7 @@ func (s *BookingService) Init(ctx context.Context) error {
 	// Parse the env variables.
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Failed to parse environment variables: %v", err)
+		return fmt.Errorf("%w: env parse: %v", service.ErrUnexpected, err)
 	}
 	s.cfg = &cfg
 
@@ -61,14 +63,10 @@ func (s *BookingService) Init(ctx context.Context) error {
 	s.bookingsBus = bus
 
 	// Init the rest API of the service.
-	if err := s.initREST(); err != nil {
-		return fmt.Errorf("init rest: %w", err)
-	}
+	s.initREST()
 
 	// Init the events.
-	if err := s.initEvents(); err != nil {
-		return fmt.Errorf("init events: %w", err)
-	}
+	s.initEvents()
 
 	return nil
 }

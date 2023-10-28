@@ -21,17 +21,16 @@ func (s *BookingService) Events() map[string]service.EventHandler {
 
 // initEvents initializes the events for which the service is subscribed.
 // To every event we will associate an event handler.
-func (s *BookingService) initEvents() error {
+func (s *BookingService) initEvents() {
 	eventHandler := &eventHandler{
 		bookingsDB: s.bookingsDB,
 	}
 
 	// Associate an event handler function to every event.
 	s.events = map[string]service.EventHandler{
-		pubsub.EventCreatedTopic: eventHandler.eventCreated,
+		pubsub.EventCreatedTopic:    eventHandler.eventCreated,
+		pubsub.LocationCreatedTopic: eventHandler.locationCreated,
 	}
-
-	return nil
 }
 
 // eventHandler handles received events. Every event for which the service is
@@ -43,8 +42,7 @@ type eventHandler struct {
 func (h *eventHandler) eventCreated(ctx context.Context, payload any) error {
 	p, ok := payload.(*pubsub.EventCreated)
 	if !ok {
-		return fmt.Errorf(
-			"%w: unknown payload type: %T", service.ErrUnexpected, payload)
+		return fmt.Errorf("unknown payload type: %T", payload)
 	}
 
 	data := internal.Event{
@@ -52,7 +50,25 @@ func (h *eventHandler) eventCreated(ctx context.Context, payload any) error {
 		LocationID: p.LocationID,
 	}
 	if err := h.bookingsDB.Create(ctx, internal.EventsCollection, data); err != nil {
-		return fmt.Errorf("%w: add to db: %v", service.ErrUnexpected, err)
+		return fmt.Errorf("add to db: %w", err)
+	}
+
+	return nil
+}
+
+func (h *eventHandler) locationCreated(ctx context.Context, payload any) error {
+	p, ok := payload.(*pubsub.LocationCreated)
+	if !ok {
+		return fmt.Errorf("unknown payload type: %T", payload)
+	}
+
+	data := internal.Location{
+		ID:   p.ID,
+		Name: p.Name,
+	}
+	err := h.bookingsDB.Create(ctx, internal.LocationsCollection, data)
+	if err != nil {
+		return fmt.Errorf("add to db: %w", err)
 	}
 
 	return nil

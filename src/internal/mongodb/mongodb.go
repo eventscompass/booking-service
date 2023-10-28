@@ -41,10 +41,10 @@ func NewMongoDBContainer(ctx context.Context, cfg *Config) (*MongoDBContainer, e
 	})
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("mongo connect: %w", err)
+		return nil, service.Unexpected(ctx, fmt.Errorf("mongo connect: %w", err))
 	}
 	if err := client.Ping(ctx, readpref.Primary()); err != nil {
-		return nil, fmt.Errorf("ping mongo: %w", err)
+		return nil, service.Unexpected(ctx, fmt.Errorf("ping mongo: %w", err))
 	}
 
 	database := client.Database(cfg.Database)
@@ -58,7 +58,7 @@ func NewMongoDBContainer(ctx context.Context, cfg *Config) (*MongoDBContainer, e
 func (m *MongoDBContainer) Create(ctx context.Context, collection string, data any) error {
 	_, err := m.database.Collection(collection).InsertOne(ctx, data)
 	if err != nil {
-		return service.Unexpected(ctx, err)
+		return service.Unexpected(ctx, fmt.Errorf("insert one: %w", err))
 	}
 	return nil
 }
@@ -75,20 +75,19 @@ func (m *MongoDBContainer) GetByID(
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, fmt.Errorf("%w: %v", service.ErrNotFound, err)
 		}
-		return nil, service.Unexpected(ctx, err)
+		return nil, service.Unexpected(ctx, fmt.Errorf("find one: %w", err))
 	}
 
-	var elem any
+	// Infer the type of the requested element and decode it.
 	switch collection {
 	case BookingsCollection:
-		elem = &Booking{}
+		var elem Booking
+		if err := one.Decode(&elem); err != nil {
+			return nil, service.Unexpected(ctx, fmt.Errorf("decode one: %w", err))
+		}
+		return elem, nil
 	default:
 		return nil, fmt.Errorf(
-			"%w: unknown collection %q", service.ErrUnexpected, collection)
+			"%w: unknown collection %q", service.ErrNotAllowed, collection)
 	}
-
-	if err := one.Decode(elem); err != nil {
-		return nil, service.Unexpected(ctx, err)
-	}
-	return elem, nil
 }
