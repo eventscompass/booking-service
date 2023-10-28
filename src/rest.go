@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi"
 
 	"github.com/eventscompass/booking-service/src/internal"
-	. "github.com/eventscompass/booking-service/src/internal"
 )
 
 // REST implements the [service.CloudService] interface.
@@ -19,7 +18,7 @@ func (s *BookingService) REST() http.Handler {
 // initREST initializes the handler for the rest server part of the service.
 // This function creates a router and registers with that router the handlers
 // for the http endpoints.
-func (s *BookingService) initREST() error {
+func (s *BookingService) initREST() {
 	restHandler := &restHandler{
 		bookingsDB: s.bookingsDB,
 	}
@@ -27,7 +26,7 @@ func (s *BookingService) initREST() error {
 
 	// API routes.
 	mux.Post("/api/bookings", restHandler.create)
-	mux.Get("/api/bookings/{id}", restHandler.readByID)
+	mux.Get("/api/bookings/{id}", restHandler.read)
 
 	// Health check.
 	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +34,6 @@ func (s *BookingService) initREST() error {
 	}))
 
 	s.restHandler = mux
-	return nil
 }
 
 // restHandler handles http requests. It is the bridge between the rest api and
@@ -67,19 +65,20 @@ func (h *restHandler) create(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *restHandler) readByID(w http.ResponseWriter, r *http.Request) {
+func (h *restHandler) read(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Decode the request key.
 	id := chi.URLParam(r, "id")
 
 	// Get the booking.
-	booking, err := h.bookingsDB.GetByID(ctx, BookingsCollection, id)
+	booking, err := h.bookingsDB.GetByID(ctx, internal.BookingsCollection, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Write the response.
 	w.Header().Set("Content-Type", "application/json; charset=utf8")
 	_ = json.NewEncoder(w).Encode(&booking)
 }
