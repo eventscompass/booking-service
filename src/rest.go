@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -29,7 +30,7 @@ func (s *BookingService) initREST() {
 	mux.Get("/api/bookings/{id}", restHandler.read)
 
 	// Health check.
-	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "I am healthy and strong, buddy!")
 	}))
 
@@ -47,21 +48,23 @@ func (h *restHandler) create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Decode the request body.
-	var data internal.Booking
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+	var booking internal.Booking
+	if err := json.NewDecoder(r.Body).Decode(&booking); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Create the booking.
-	err := h.bookingsDB.Create(ctx, internal.BookingsCollection, data)
+	slog.Info("request to create booking", slog.Any("booking", booking))
+	err := h.bookingsDB.Create(ctx, internal.BookingsCollection, booking)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	slog.Info("booking successfully created")
 
 	// Write the response.
-	w.Header().Set("location", fmt.Sprintf("%s/%s", r.URL.Path, data.ID))
+	w.Header().Set("Location", fmt.Sprintf("%s/%s", r.URL.Path, booking.ID))
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -72,6 +75,7 @@ func (h *restHandler) read(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	// Get the booking.
+	slog.Info("request to read booking", slog.String("id", id))
 	booking, err := h.bookingsDB.GetByID(ctx, internal.BookingsCollection, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -80,5 +84,7 @@ func (h *restHandler) read(w http.ResponseWriter, r *http.Request) {
 
 	// Write the response.
 	w.Header().Set("Content-Type", "application/json; charset=utf8")
-	_ = json.NewEncoder(w).Encode(&booking)
+	if err := json.NewEncoder(w).Encode(&booking); err != nil {
+		slog.Info("failed to write response", err)
+	}
 }
