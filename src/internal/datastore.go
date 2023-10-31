@@ -2,11 +2,13 @@ package internal
 
 import (
 	"context"
+	"io"
 	"time"
 )
 
 // BookingsContainer abstracts the database layer for storing bookings.
 type BookingsContainer interface {
+	io.Closer
 
 	// Create creates a new entry in the given collection in the
 	// container.
