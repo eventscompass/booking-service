@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"log/slog"
 
 	"github.com/eventscompass/booking-service/src/internal"
 	"github.com/eventscompass/service-framework/pubsub"
@@ -39,37 +40,47 @@ type eventHandler struct {
 	bookingsDB internal.BookingsContainer
 }
 
-func (h *eventHandler) eventCreated(ctx context.Context, payload any) error {
-	p, ok := payload.(*pubsub.EventCreated)
-	if !ok {
-		return fmt.Errorf("unknown payload type: %T", payload)
+func (h *eventHandler) eventCreated(ctx context.Context, msg []byte) {
+	slog.Info("received message", slog.String("topic", pubsub.EventCreatedTopic))
+
+	var payload pubsub.EventCreated
+	if err := json.Unmarshal(msg, &payload); err != nil {
+		slog.Error("failed to unmarshal payload", err)
+		return
 	}
 
 	data := internal.Event{
-		ID:         p.ID,
-		LocationID: p.LocationID,
+		ID:         payload.ID,
+		LocationID: payload.LocationID,
 	}
 	if err := h.bookingsDB.Create(ctx, internal.EventsCollection, data); err != nil {
-		return fmt.Errorf("add to db: %w", err)
+		slog.Error(
+			"failed to add to db",
+			slog.Any("message", data),
+			slog.String("error", err.Error()),
+		)
 	}
-
-	return nil
 }
 
-func (h *eventHandler) locationCreated(ctx context.Context, payload any) error {
-	p, ok := payload.(*pubsub.LocationCreated)
-	if !ok {
-		return fmt.Errorf("unknown payload type: %T", payload)
+func (h *eventHandler) locationCreated(ctx context.Context, msg []byte) {
+	slog.Info("received message", slog.String("topic", pubsub.LocationCreatedTopic))
+
+	var payload pubsub.LocationCreated
+	if err := json.Unmarshal(msg, &payload); err != nil {
+		slog.Error("failed to unmarshal payload", err)
+		return
 	}
 
 	data := internal.Location{
-		ID:   p.ID,
-		Name: p.Name,
+		ID:   payload.ID,
+		Name: payload.Name,
 	}
 	err := h.bookingsDB.Create(ctx, internal.LocationsCollection, data)
 	if err != nil {
-		return fmt.Errorf("add to db: %w", err)
+		slog.Error(
+			"failed to add to db",
+			slog.Any("message", data),
+			slog.String("error", err.Error()),
+		)
 	}
-
-	return nil
 }
