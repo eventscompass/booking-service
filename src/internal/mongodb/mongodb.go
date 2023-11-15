@@ -27,6 +27,8 @@ type Config struct {
 }
 
 // MongoDBContainer is a container backed by a Mongo database.
+//
+//nolint:revive // this type will probably not be used as mongodb.MongoDBContainer
 type MongoDBContainer struct {
 	client   *mongo.Client
 	database *mongo.Database
@@ -54,7 +56,7 @@ func NewMongoDBContainer(ctx context.Context, cfg *Config) (*MongoDBContainer, e
 		return nil, service.Unexpected(ctx, fmt.Errorf("mongo connect: %w", err))
 	}
 	if err := client.Ping(ctx, readpref.Primary()); err != nil {
-		_ = client.Disconnect(ctx)
+		_ = client.Disconnect(ctx) //nolint:errcheck // intentional
 		return nil, service.Unexpected(ctx, fmt.Errorf("ping mongo: %w", err))
 	}
 
@@ -107,9 +109,12 @@ func (m *MongoDBContainer) GetByID(
 func (m *MongoDBContainer) Close() error {
 	// Disconnect the client by waiting up to 10 seconds for
 	// in-progress operations to complete.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:gomnd // intentional
 	defer cancel()
-	return m.client.Disconnect(ctx)
+	if err := m.client.Disconnect(ctx); err != nil {
+		return service.Unexpected(ctx, err)
+	}
+	return nil
 }
 
 var (
