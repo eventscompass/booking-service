@@ -50,9 +50,15 @@ type Location struct {
 }
 
 var (
-	// Collections.
-	BookingsCollection  string = "bookings"
-	EventsCollection    string = "events"
-	LocationsCollection string = "locations"
-	UsersCollection     string = "users"
+	// BookingsCollection is the name of the collection where bookings will be stored.
+	BookingsCollection = "bookings"
+
+	// EventsCollection is the name of the collection where events will be stored.
+	EventsCollection = "events"
+
+	// LocationsCollection is the name of the collection where locations will be stored.
+	LocationsCollection = "locations"
+
+	// UsersCollection is the name of the collection where users will be stored.
+	UsersCollection = "users"
 )

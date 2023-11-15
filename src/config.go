@@ -4,6 +4,7 @@ import (
 	"github.com/eventscompass/service-framework/service"
 )
 
+// Config encapsulates the configuration of the service.
 type Config struct {
 	// BookingsDB encapsulates the configuration of the database
 	// layer used by the service.
