@@ -6,16 +6,16 @@ services:
     container_name: booking-service
     build: .
     environment:
-      - BOOKING_MONGO_HOST=mongodb
-      - BOOKING_MONGO_PORT=27017
-      - BOOKING_MONGO_USERNAME=bookingservice
-      - BOOKING_MONGO_PASSWORD=mongo_password
-      - BOOKING_MONGO_DATABASE=bookings
       - HTTP_SERVER_LISTEN=:8080
-      - MESSAGE_BUS_HOST=rabbitmq
-      - MESSAGE_BUS_PORT=5672
-      - MESSAGE_BUS_USERNAME=bookingservice
-      - MESSAGE_BUS_PASSWORD=rabbitmq_password
+      - MONGO_DB_HOST=mongodb
+      - MONGO_DB_PORT=27017
+      - MONGO_DB_USERNAME=bookingservice
+      - MONGO_DB_PASSWORD=mongo_password
+      - MONGO_DB_DATABASE=bookings
+      - RABBIT_MQ_HOST=rabbitmq
+      - RABBIT_MQ_PORT=5672
+      - RABBIT_MQ_USERNAME=bookingservice
+      - RABBIT_MQ_PASSWORD=rabbitmq_password
     ports:
       - "8080:8080"
     expose:

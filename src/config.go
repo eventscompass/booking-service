@@ -1,26 +1,32 @@
 package main
 
-import (
-	"github.com/eventscompass/service-framework/service"
-)
-
 // Config encapsulates the configuration of the service.
 type Config struct {
+
 	// BookingsDB encapsulates the configuration of the database
 	// layer used by the service.
 	BookingsDB DBConfig
 
 	// BusConfig encapsulates the configuration for the message
 	// bus used by the service.
-	BookingsMQ service.BusConfig
+	BookingsMQ BusConfig
 }
 
 // DBConfig encapsulates the configuration of the database layer
 // used by the service.
 type DBConfig struct {
-	Host     string `env:"BOOKING_MONGO_HOST" envDefault:"mongodb"`
-	Port     int    `env:"BOOKING_MONGO_PORT" envDefault:"27017"`
-	Username string `env:"BOOKING_MONGO_USERNAME" envDefault:"user"`
-	Password string `env:"BOOKING_MONGO_PASSWORD" envDefault:"password"`
-	Database string `env:"BOOKING_MONGO_DATABASE" envDefault:"bookings"`
+	Host     string `env:"MONGO_DB_HOST"`
+	Port     int    `env:"MONGO_DB_PORT"`
+	Username string `env:"MONGO_DB_USERNAME"`
+	Password string `env:"MONGO_DB_PASSWORD"`
+	Database string `env:"MONGO_DB_DATABASE"`
+}
+
+// BusConfig encapsulates the configuration for the message bus
+// used by the service.
+type BusConfig struct {
+	Host     string `env:"RABBIT_MQ_HOST"`
+	Port     int    `env:"RABBIT_MQ_PORT"`
+	Username string `env:"RABBIT_MQ_USERNAME"`
+	Password string `env:"RABBIT_MQ_PASSWORD"`
 }
