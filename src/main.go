@@ -55,8 +55,9 @@ func (s *BookingService) Init(ctx context.Context) error {
 	}
 	s.bookingsDB = db
 
-	// Init the message bus,
-	bus, err := rabbitmq.NewAMQPBus(&s.cfg.BookingsMQ, pubsub.EventsExchange)
+	// Init the message bus.
+	busCfg := rabbitmq.Config(s.cfg.BookingsMQ)
+	bus, err := rabbitmq.NewAMQPBus(&busCfg, pubsub.EventsExchange)
 	if err != nil {
 		return fmt.Errorf("init mq: %w", err)
 	}
